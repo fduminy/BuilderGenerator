@@ -1,13 +1,12 @@
-package nu.mulli.builderbuilder;
+package com.robert.buildergenerator;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.List;
 
-import org.antlr.stringtemplate.StringTemplateGroup;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.project.MavenProject;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
 
 import com.thoughtworks.qdox.JavaDocBuilder;
 
@@ -23,33 +22,28 @@ public abstract class AbstractCodeGeneratorMojo extends AbstractMojo {
 
 	/**
 	 * Sources
-	 *
+	 * 
 	 * @parameter
 	 * @required
 	 */
 	List<String> sources;
 
 	/**
-	 * @parameter default-value="target/generated-sources/builderbuilder"
+	 * @parameter default-value="target/generated-sources/buildergenerator"
 	 * @required
 	 */
 	File outputDirectory;
 
-	StringTemplateGroup templates;
+	STGroup templates;
 	JavaDocBuilder docBuilder;
 
 	@Override
 	public void execute() {
 		try {
-			InputStream is = BuilderBuilderMojo.class.getClassLoader().getResourceAsStream("builderbuilder.stg");
-			try {
-				this.templates = new StringTemplateGroup(new InputStreamReader(is));
-			} finally {
-				is.close();
-			}
+			this.templates = new STGroupFile("template.stg");
 
 			this.docBuilder = new JavaDocBuilder();
-			for (String r : sources) {
+			for (final String r : sources) {
 				docBuilder.addSourceTree(new File(r));
 			}
 
@@ -57,11 +51,11 @@ public abstract class AbstractCodeGeneratorMojo extends AbstractMojo {
 
 			project.addCompileSourceRoot(outputDirectory.getAbsolutePath());
 
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			getLog().error("General error", e);
 		}
 	}
 
-	protected abstract  void generate() throws Exception;
+	protected abstract void generate() throws Exception;
 
 }

@@ -1,0 +1,43 @@
+group buildergenerator;
+
+set(it) ::= <<
+instance.set<it.nameCapitalized>(<it.name>);
+
+>>
+
+attribute(it) ::= <<
+private <it.type> <it.name>;
+
+>>
+
+setter(it) ::= <<
+public <builderName> with<it.nameCapitalized>(<it.type> <it.name>) {
+	this.<it.name> = <it.name>;
+	return this;
+}
+
+
+>>
+
+builder(packageName, builderName, resultClass, builderNameCapitalized, attributes) ::= <<
+package <packageName>;
+
+public class <builderName> {
+
+	<attributes:attribute()>
+	private <builderName>() {}
+	
+	public static <builderName> a<builderNameCapitalized>() {
+		return new <builderName>();
+	}
+	
+	public <resultClass> build() {
+		<resultClass> instance = new <resultClass>();
+		
+		<attributes:set()>
+		return instance;
+	}
+	
+	<attributes:setter()>
+}
+>>
