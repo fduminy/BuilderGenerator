@@ -5,8 +5,18 @@ instance.set<it.nameCapitalized>(<it.name>);
 
 >>
 
+setList(it) ::= <<
+instance.get<it.nameCapitalized>().addAll(<it.name>);
+
+>>
+
 attribute(it) ::= <<
 private <it.type> <it.name>;
+
+>>
+
+listAttribute(it) ::= <<
+private java.util.List\<<it.type>\> <it.name> = new java.util.ArrayList\<>();
 
 >>
 
@@ -19,12 +29,22 @@ public <builderName> with<it.nameCapitalized>(<it.type> <it.name>) {
 
 >>
 
-builder(packageName, builderName, resultClass, builderNameCapitalized, attributes) ::= <<
+listSetter(it) ::= <<
+public <builderName> withAdditional<it.nameCapitalized>(<it.type> <it.name>) {
+	this.<it.name>.add(<it.name>);
+	return this;
+}
+
+
+>>
+
+builder(packageName, builderName, resultClass, builderNameCapitalized, attributes, listAttributes) ::= <<
 package <packageName>;
 
 public class <builderName> {
 
 	<attributes:attribute()>
+	<listAttributes:listAttribute()>
 	private <builderName>() {}
 	
 	public static <builderName> a<builderNameCapitalized>() {
@@ -35,9 +55,13 @@ public class <builderName> {
 		<resultClass> instance = new <resultClass>();
 		
 		<attributes:set()>
+		<listAttributes:setList()>
+		
 		return instance;
 	}
 	
 	<attributes:setter()>
+	<listAttributes:listSetter()>
+	
 }
 >>

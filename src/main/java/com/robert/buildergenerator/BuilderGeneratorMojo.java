@@ -87,8 +87,32 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 		st.add("resultClass", jc.asType().getGenericValue());
 		st.add("builderNameCapitalized", capitalize(builderName));
 		st.add("attributes", getAttributes(jc));
+		st.add("listAttributes", getListAttributes(jc));
 
 		writeBuilder(jc, st.render());
+	}
+
+	private List<Attribute> getListAttributes(final JavaClass jc) {
+		final ArrayList<Attribute> attrs = new ArrayList<>();
+
+		for (final JavaMethod method : jc.getMethods()) {
+			if (method.getName().startsWith("get") && method.getParameters().length == 0 && returnsGenericList(method)) {
+				final String name = method.getName().substring(3);
+
+				final Attribute attr = new Attribute();
+				attr.setName(uncapitalize(name));
+				attr.setNameCapitalized(name);
+				attr.setType(method.getReturnType().getActualTypeArguments()[0].getValue());
+				attrs.add(attr);
+			}
+		}
+
+		return attrs;
+	}
+
+	private boolean returnsGenericList(final JavaMethod method) {
+		return method.getReturnType().getValue().equals("java.util.List")
+				&& method.getReturnType().getActualTypeArguments().length == 1;
 	}
 
 	private List<Attribute> getAttributes(final JavaClass jc) {
