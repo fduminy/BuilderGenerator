@@ -3,7 +3,13 @@ package com.robert.buildergenerator;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.io.FileUtils;
 import org.stringtemplate.v4.ST;
@@ -21,11 +27,48 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 
 	@Override
 	public void generate() throws Exception {
-		for (final JavaClass jc : docBuilder.getClasses()) {
-			final String builderSource = generateBuilderFor(jc);
-			if (builderSource != null) {
-				writeBuilder(jc, builderSource);
+		final Map<String, JavaClass> foundClasses = new HashMap<>();
+		final List<String> configuredClasses = new ArrayList<>();
+
+		final Queue<JavaClass> classesToParse = new LinkedBlockingQueue<>();
+		classesToParse.addAll(Arrays.asList(docBuilder.getClasses()));
+		JavaClass jc;
+		while ((jc = classesToParse.poll()) != null) {
+			classesToParse.addAll(Arrays.asList(jc.getNestedClasses()));
+
+			if (shouldGenerateBuilder(jc)) {
+				generateBuilderFor(jc);
 			}
+			configuredClasses.addAll(readConfiguredClasses(jc));
+
+			foundClasses.put(jc.asType().getGenericValue(), jc);
+		}
+
+		for (final String clazz : configuredClasses) {
+			final JavaClass javaClass = foundClasses.get(clazz);
+			if (javaClass != null) {
+				generateBuilderFor(javaClass);
+			} else {
+				System.out.println("Couldn't find class " + clazz);
+			}
+		}
+	}
+
+	private List<String> readConfiguredClasses(final JavaClass jc) {
+		final DocletTag tag = jc.getTagByName("generatebuildersfor");
+
+		if (tag != null) {
+			return Arrays.asList(tag.getParameters());
+		}
+		return Collections.emptyList();
+	}
+
+	private boolean shouldGenerateBuilder(final JavaClass jc) {
+		final DocletTag tag = jc.getTagByName("generatebuilder");
+		if (tag != null && classHasEmptyConstructor(jc)) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 
@@ -35,21 +78,17 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 		FileUtils.writeStringToFile(builderFile, builder);
 	}
 
-	public String generateBuilderFor(final JavaClass jc) throws IOException {
-		final DocletTag tag = jc.getTagByName("generatebuilder");
-		if (tag != null && classHasEmptyConstructor(jc)) {
-			final String builderName = getBuilderName(jc);
+	public void generateBuilderFor(final JavaClass jc) throws IOException {
+		final String builderName = getBuilderName(jc);
 
-			final ST st = templates.getInstanceOf("builder");
-			st.add("packageName", jc.getPackageName());
-			st.add("builderName", builderName);
-			st.add("resultClass", jc.getName());
-			st.add("builderNameCapitalized", capitalize(builderName));
-			st.add("attributes", getAttributes(jc));
+		final ST st = templates.getInstanceOf("builder");
+		st.add("packageName", jc.getPackageName());
+		st.add("builderName", builderName);
+		st.add("resultClass", jc.asType().getGenericValue());
+		st.add("builderNameCapitalized", capitalize(builderName));
+		st.add("attributes", getAttributes(jc));
 
-			return st.render();
-		}
-		return null;
+		writeBuilder(jc, st.render());
 	}
 
 	private List<Attribute> getAttributes(final JavaClass jc) {
@@ -63,7 +102,7 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 				final Attribute attr = new Attribute();
 				attr.setName(uncapitalize(name));
 				attr.setNameCapitalized(name);
-				attr.setType(parameter.getType().getFullyQualifiedName());
+				attr.setType(parameter.getType().getGenericValue());
 				attrs.add(attr);
 			}
 		}
