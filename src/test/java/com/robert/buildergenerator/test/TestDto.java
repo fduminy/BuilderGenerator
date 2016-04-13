@@ -5,7 +5,7 @@ import java.util.List;
 
 public class TestDto {
 
-	private final List<String> strings = new ArrayList<>();
+	private final List<String> strings = new ArrayList<String>();
 
 	public List<String> getStrings() {
 		return strings;

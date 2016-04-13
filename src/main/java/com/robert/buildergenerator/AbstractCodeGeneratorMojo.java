@@ -1,14 +1,13 @@
 package com.robert.buildergenerator;
 
-import java.io.File;
-import java.util.List;
-
+import com.thoughtworks.qdox.JavaDocBuilder;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.project.MavenProject;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupFile;
 
-import com.thoughtworks.qdox.JavaDocBuilder;
+import java.io.File;
+import java.util.List;
 
 public abstract class AbstractCodeGeneratorMojo extends AbstractMojo {
 
@@ -43,6 +42,10 @@ public abstract class AbstractCodeGeneratorMojo extends AbstractMojo {
 			this.templates = new STGroupFile("template.stg");
 
 			this.docBuilder = new JavaDocBuilder();
+			if (sources.isEmpty()) {
+				getLog().warn("no sources to parse");
+			}
+
 			for (final String r : sources) {
 				docBuilder.addSourceTree(new File(r));
 			}

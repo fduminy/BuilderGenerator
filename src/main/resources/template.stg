@@ -16,7 +16,7 @@ private <it.type> <it.name>;
 >>
 
 listAttribute(it) ::= <<
-private java.util.List\<<it.type>\> <it.name> = new java.util.ArrayList\<>();
+private java.util.List\<<it.type>\> <it.name> = new java.util.ArrayList\<<it.type>\>();
 
 >>
 

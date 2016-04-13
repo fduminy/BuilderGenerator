@@ -1,23 +1,16 @@
 package com.robert.buildergenerator;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.io.FileUtils;
-import org.stringtemplate.v4.ST;
-
 import com.thoughtworks.qdox.model.DocletTag;
 import com.thoughtworks.qdox.model.JavaClass;
 import com.thoughtworks.qdox.model.JavaMethod;
 import com.thoughtworks.qdox.model.JavaParameter;
+import org.apache.commons.io.FileUtils;
+import org.stringtemplate.v4.ST;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @goal generate-sources
@@ -25,12 +18,14 @@ import com.thoughtworks.qdox.model.JavaParameter;
  */
 public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 
+	public static final String SUB_PACKAGE = ".builder";
+
 	@Override
 	public void generate() throws Exception {
-		final Map<String, JavaClass> foundClasses = new HashMap<>();
-		final List<String> configuredClasses = new ArrayList<>();
+		final Map<String, JavaClass> foundClasses = new HashMap<String, JavaClass>();
+		final List<String> configuredClasses = new ArrayList<String>();
 
-		final Queue<JavaClass> classesToParse = new LinkedBlockingQueue<>();
+		final Queue<JavaClass> classesToParse = new LinkedBlockingQueue<JavaClass>();
 		classesToParse.addAll(Arrays.asList(docBuilder.getClasses()));
 		JavaClass jc;
 		while ((jc = classesToParse.poll()) != null) {
@@ -65,7 +60,8 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 
 	private boolean shouldGenerateBuilder(final JavaClass jc) {
 		final DocletTag tag = jc.getTagByName("generatebuilder");
-		if (tag != null && classHasEmptyConstructor(jc)) {
+		if (/*tag != null && */classHasEmptyConstructor(jc)) {
+			System.out.println("shouldGenerateBuilder(" + jc.getFullyQualifiedName() + ") -> " + true);
 			return true;
 		} else {
 			return false;
@@ -73,7 +69,8 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 	}
 
 	private void writeBuilder(final JavaClass jc, final String builder) throws IOException {
-		final File builderFile = new File(outputDirectory, jc.getPackageName().replace(".", "/") + "/"
+		String builderPackage = jc.getPackageName() + SUB_PACKAGE;
+		final File builderFile = new File(outputDirectory, builderPackage.replace(".", "/") + "/"
 				+ getBuilderName(jc) + ".java");
 		FileUtils.writeStringToFile(builderFile, builder);
 	}
@@ -82,7 +79,7 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 		final String builderName = getBuilderName(jc);
 
 		final ST st = templates.getInstanceOf("builder");
-		st.add("packageName", jc.getPackageName());
+		st.add("packageName", jc.getPackageName() + SUB_PACKAGE);
 		st.add("builderName", builderName);
 		st.add("resultClass", jc.asType().getGenericValue());
 		st.add("builderNameCapitalized", capitalize(builderName));
@@ -93,7 +90,7 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 	}
 
 	private List<Attribute> getListAttributes(final JavaClass jc) {
-		final ArrayList<Attribute> attrs = new ArrayList<>();
+		final ArrayList<Attribute> attrs = new ArrayList<Attribute>();
 
 		for (final JavaMethod method : jc.getMethods()) {
 			if (method.getName().startsWith("get") && method.getParameters().length == 0 && returnsGenericList(method)) {
@@ -116,7 +113,7 @@ public class BuilderGeneratorMojo extends AbstractCodeGeneratorMojo {
 	}
 
 	private List<Attribute> getAttributes(final JavaClass jc) {
-		final ArrayList<Attribute> attrs = new ArrayList<>();
+		final ArrayList<Attribute> attrs = new ArrayList<Attribute>();
 
 		for (final JavaMethod method : jc.getMethods()) {
 			if (method.getName().startsWith("set") && method.getParameters().length == 1) {
